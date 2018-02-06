@@ -8,7 +8,7 @@ import skimage.color
 import skimage.io
 import cv2
 import os
-
+import random
 # INPUT_SHAPE as input for CNN (cropped shapes).
 IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS = 75, 320, 3
 INPUT_SHAPE = (IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH)
@@ -60,6 +60,7 @@ class PreProcessData(object):
 
         img = crop(img)
         img = rgb_to_yuv(img)
+        img = random_shadow(img)
         img = normalize(img)
 
         return {'img': img, 'steering_angle': steering_angle}
@@ -73,7 +74,6 @@ class AugmentData(object):
         img, steering_angle = sample['img'], sample['steering_angle']
 
         img = random_brightness(img)
-        img = random_shadow(img)
         img, steering_angle = random_flip(img, steering_angle)
         img, steering_angle = random_translate(img, steering_angle, 100, 10)
 
@@ -190,27 +190,9 @@ def random_brightness(image):
         randomly.
 
     """
+
     gamma = np.random.random_sample() + 0.5
     return skimage.exposure.adjust_gamma(image, gamma)
-
-
-def random_shadow(image):
-    """
-       Randomly creates random squared shadows.
-
-    """
-    min_length_shadow, min_width_shadow = 20, 100
-
-    if np.random.random() <= 0.5:
-        x1 = np.random.randint(60, 60 + IMAGE_HEIGHT - min_length_shadow)
-        y1 = np.random.randint(0, IMAGE_WIDTH - min_width_shadow)
-        x2 = np.random.randint(x1 + min_length_shadow, IMAGE_HEIGHT)
-        y2 = np.random.randint(y1 + min_width_shadow, IMAGE_WIDTH)
-
-        gamma = 1.5
-        image[x1:x2, y1:y2] = skimage.exposure.adjust_gamma(image[x1:x2, y1:y2], gamma)
-
-    return image
 
 
 def random_flip(image, steering_angle):
@@ -245,3 +227,33 @@ def random_translate(image, steering_angle, range_x, range_y):
     image = cv2.warpAffine(image, trans_m, (width, height))
 
     return image, steering_angle
+
+
+def random_shadow(image):
+    """
+        read croped yuv image
+        add random shadow as trapeze between edge and x1/x2
+    """
+
+    if random.random() <= 1:
+
+        x1 = random.randint(50, 200)
+        x2 = random.randint(x1, x1 + 80)
+        while x2 == x1:
+            x2 = random.randint(x1, x1 + 80)
+        step = np.float32(abs(x1 - x2)) / 75.
+
+        array = np.arange(x1, x2, step)
+
+        if random.random() < 0.5:
+            array = np.flipud(array)
+        array = np.array(array, dtype=int)
+
+        if random.random() <= 0.5:
+            for i in range(IMAGE_HEIGHT):
+                image[i, 0:array[i], 0] = np.random.randint(0, 5, array[i])
+        else:
+            for i in range(IMAGE_HEIGHT):
+                image[i, array[i]:IMAGE_WIDTH, 0] = np.random.randint(0,5, IMAGE_WIDTH - array[i])
+
+    return image
