@@ -21,8 +21,8 @@ In this short project we aim to implement a self-driving car algorithm within a 
 
 # Some Facts
 - Processing pipeline
-![Game Menu](/img/pipeline.PNG)
+![Pipeline](/img/pipeline.PNG)
 
 - Network architecture
-![Game Racetrack](/img/network.PNG)
+![Network](/img/network.PNG)
 
